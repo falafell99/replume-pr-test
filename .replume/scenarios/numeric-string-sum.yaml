@@ -1,0 +1,9 @@
+v: 1
+id: numeric-string-sum
+description: sum handles numeric strings as numbers
+declared_covers: ["src/math.js"]
+run: "node scripts/check-numeric-strings.mjs"
+expect:
+  exit_code: 0
+  stdout_contains: ["numeric strings sum to five"]
+  stdout_count: []

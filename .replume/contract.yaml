@@ -1,0 +1,10 @@
+v: 1
+id: numeric-string-sum
+task: "Make sum accept numeric strings as numbers"
+created_at: "2026-10-24T00:00:00Z"
+status: confirmed
+allow: ["src/math.js"]
+protect: ["test/**"]
+must_check: ["numeric-string-sum"]
+forbid_commands: []
+test_command: "npm test"
