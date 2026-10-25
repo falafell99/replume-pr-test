@@ -1,7 +1,8 @@
 name: Replume PR check
 on:
   pull_request:
-    branches: [trial/pr-check-base]
+    types: [opened]
+    branches: [trial/pr-check-3-policy, trial/pr-check-3-no-contract]
 
 concurrency:
   group: replume-pr-${{ github.event.pull_request.number }}
@@ -24,12 +25,25 @@ jobs:
           node-version: '20'
       - run: mkdir -p "$RUNNER_TEMP/replume-ci"
       - run: npm install -g replume-cli@0.2.1
+      - name: Install project dependencies
+        if: ${{ hashFiles('package-lock.json') != '' }}
+        run: npm ci
       - name: Verify the PR merge commit against base policy
         shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set +e
+          if ! git show "$BASE_SHA:.github/replume-pr-check-publish.mjs" > "$RUNNER_TEMP/replume-base-publisher.mjs"; then
+            printf '%s\n' 'Commit .github/replume-pr-check-publish.mjs to the PR base branch.' > "$RUNNER_TEMP/replume-ci/policy.txt"
+            printf '2\n' > "$RUNNER_TEMP/replume-ci/exit.txt"
+            exit 0
+          fi
+          node "$RUNNER_TEMP/replume-base-publisher.mjs" --check-policy "$BASE_SHA" "$RUNNER_TEMP/replume-ci/policy.txt"
+          if [ "$?" -ne 0 ]; then
+            printf '2\n' > "$RUNNER_TEMP/replume-ci/exit.txt"
+            exit 0
+          fi
           replume verify --commit HEAD --trusted-base "$BASE_SHA" --isolation worktree --json > "$RUNNER_TEMP/replume-ci/report.json" 2> "$RUNNER_TEMP/replume-ci/verify.log"
           code=$?
           printf '%s\n' "$code" > "$RUNNER_TEMP/replume-ci/exit.txt"
@@ -79,4 +93,5 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           REPLUME_REPORT: replume-ci/report.json
           REPLUME_VERIFY_EXIT_FILE: replume-ci/exit.txt
+          REPLUME_POLICY_NOTE: replume-ci/policy.txt
         run: node .github/replume-pr-check-publish.mjs
